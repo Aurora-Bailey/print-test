@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>4x6 Shipping Label</title>
+  <style>
+    :root {
+      font-family: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+      color: #050505;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #e9ecef;
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 22px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 0.9rem;
+    }
+    .controls label {
+      font-weight: 600;
+    }
+    .controls input[type="range"] {
+      width: 240px;
+    }
+    .controls output {
+      font-weight: 700;
+      min-width: 3ch;
+      text-align: center;
+    }
+    button {
+      border: none;
+      background: #050505;
+      color: #fff;
+      padding: 6px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      letter-spacing: 0.08em;
+    }
+    .sheet {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 18px;
+    }
+    .label {
+      width: 4in;
+      height: 6in;
+      padding: 0;
+      background: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+    .label::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border: 2px solid #000;
+      pointer-events: none;
+    }
+    .label-inner {
+      height: 100%;
+      padding: 0.28in;
+      display: flex;
+      flex-direction: column;
+      gap: 0.18in;
+      position: relative;
+      z-index: 1;
+    }
+    .carrier-band {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      text-transform: uppercase;
+      font-weight: 700;
+      border-bottom: 2px solid #000;
+      padding-bottom: 6px;
+    }
+    .carrier-band span {
+      font-size: 0.95rem;
+      letter-spacing: 0.12em;
+    }
+    .manifest {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 8px 16px;
+      font-size: 0.85rem;
+    }
+    .manifest strong {
+      display: block;
+      font-size: 1rem;
+      letter-spacing: 0.08em;
+    }
+    .address-block {
+      border: 1.5px solid #000;
+      padding: 10px;
+      min-height: 1.4in;
+    }
+    .address-title {
+      font-size: 0.75rem;
+      letter-spacing: 0.12em;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+    .address-block p {
+      margin: 2px 0;
+      font-size: 0.95rem;
+      line-height: 1.2;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 2in 1.7in;
+      gap: 14px;
+      flex: 1;
+    }
+    .scan-zone {
+      border: 1.5px solid #000;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      justify-content: space-between;
+    }
+    .datamatrix {
+      width: 100%;
+      border: 1px solid #000;
+    }
+    .datamatrix rect {
+      fill: #000;
+    }
+    .barcode {
+      display: flex;
+      gap: 2px;
+      height: 70px;
+      align-items: flex-end;
+    }
+    .barcode span {
+      display: inline-block;
+      width: 3px;
+      background: #000;
+    }
+    .footer-meta {
+      display: flex;
+      justify-content: space-between;
+      text-transform: uppercase;
+      font-weight: 600;
+      border-top: 2px solid #000;
+      padding-top: 8px;
+      font-size: 0.85rem;
+    }
+    @media print {
+      body {
+        background: #fff;
+        padding: 0.2in;
+      }
+      .controls {
+        display: none;
+      }
+      .sheet {
+        gap: 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <label for="quantity">Labels to print</label>
+    <input type="range" id="quantity" min="1" max="100" value="1" />
+    <output id="quantityDisplay">1</output>
+    <button id="printButton" type="button">Print</button>
+  </div>
+  <div id="labelSheet" class="sheet" aria-live="polite"></div>
+
+  <script>
+    const quantityInput = document.getElementById("quantity");
+    const quantityDisplay = document.getElementById("quantityDisplay");
+    const sheet = document.getElementById("labelSheet");
+
+    const dataMatrixPattern = [
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+      [1,0,0,0,1,0,0,1,0,0,0,1,0,1],
+      [1,0,1,0,0,1,0,0,1,0,1,0,0,1],
+      [1,0,0,1,0,0,1,0,0,1,0,0,1,1],
+      [1,1,0,0,0,1,0,1,0,0,0,1,0,1],
+      [1,0,0,1,0,0,1,0,0,1,0,0,1,1],
+      [1,0,1,0,0,1,0,0,1,0,1,0,0,1],
+      [1,0,0,0,1,0,0,1,0,0,0,1,0,1],
+      [1,1,0,1,0,0,1,0,0,1,0,0,1,1],
+      [1,0,0,1,0,0,1,0,0,1,0,0,1,1],
+      [1,0,1,0,0,1,0,0,1,0,1,0,0,1],
+      [1,0,0,0,1,0,0,1,0,0,0,1,0,1],
+      [1,1,0,0,0,1,0,1,0,0,0,1,0,1],
+      [1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    ];
+
+    function createDataMatrix(pattern, cell) {
+      let rects = "";
+      pattern.forEach((row, r) => {
+        row.forEach((value, c) => {
+          if (value) {
+            rects += `<rect x="${c * cell}" y="${r * cell}" width="${cell}" height="${cell}"></rect>`;
+          }
+        });
+      });
+      const width = pattern[0].length * cell;
+      const height = pattern.length * cell;
+      return `<svg class="datamatrix" viewBox="0 0 ${width} ${height}" role="img" aria-label="Parcel tracking matrix">${rects}</svg>`;
+    }
+
+    function createBarcode(seed) {
+      const pattern = Array.from({ length: 40 }, (_, idx) => (idx * seed) % 5 < 3);
+      return `
+        <div class="barcode" aria-label="Tracking barcode">
+          ${pattern
+            .map(fill => `<span style="transform: scaleY(${fill ? 1 : 0.55}); width:${fill ? 4 : 2}px"></span>`)
+            .join("")}
+        </div>
+      `;
+    }
+
+    function renderLabel(sequence) {
+      const dm = createDataMatrix(dataMatrixPattern, 8);
+      const barcode = createBarcode(sequence + 3);
+      const tracking = `TRK ${Date.now().toString().slice(-6)}${sequence.toString().padStart(2, "0")}`;
+      return `
+        <article class="label" aria-label="Shipping label ${sequence}">
+          <div class="label-inner">
+            <header class="carrier-band">
+              <div>
+                Priority Express &middot; Zone 5 &middot; Ship 2 Day
+              </div>
+              <span>${tracking}</span>
+            </header>
+            <section class="grid">
+              <div>
+                <div class="address-block">
+                  <div class="address-title">From</div>
+                  <p>Print Test Fulfillment</p>
+                  <p>205 Warehouse Loop</p>
+                  <p>Columbus, OH 43215</p>
+                  <p>Tel 614-555-0142</p>
+                </div>
+                <div class="address-block" style="margin-top:10px;">
+                  <div class="address-title">To</div>
+                  <p>City Circuit Hobbies</p>
+                  <p>804 Autobahn Ave</p>
+                  <p>San Jose, CA 95131</p>
+                  <p>Dock 7 &middot; Ref #${sequence.toString().padStart(4, "0")}</p>
+                </div>
+              </div>
+              <div class="scan-zone">
+                ${dm}
+                <div>
+                  <div style="font-size:0.8rem; text-transform:uppercase; letter-spacing:0.1em;">Scan on arrival</div>
+                  ${barcode}
+                  <div style="font-size:0.8rem; letter-spacing:0.05em;">Wt 2.4 lb &middot; DIM 4x6 &middot; Insured</div>
+                </div>
+              </div>
+            </section>
+            <section class="manifest">
+              <div>
+                Service <strong>Linehaul 48</strong>
+              </div>
+              <div>
+                Route <strong>ABN &rarr; WST</strong>
+              </div>
+              <div>
+                Contents <strong>Diecast Cars</strong>
+              </div>
+              <div>
+                Hazmat <strong>None</strong>
+              </div>
+            </section>
+            <footer class="footer-meta">
+              <span>Pick ${new Date().toLocaleDateString()}</span>
+              <span>Wave ${Math.ceil(sequence / 4)}</span>
+              <span>Cage ${((sequence - 1) % 6) + 1}</span>
+            </footer>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderLabels() {
+      const count = Number(quantityInput.value);
+      quantityDisplay.textContent = quantityInput.value;
+      const labels = Array.from({ length: count }, (_, idx) => renderLabel(idx + 1));
+      sheet.innerHTML = labels.join("");
+    }
+
+    quantityInput.addEventListener("input", renderLabels);
+
+    document.getElementById("printButton").addEventListener("click", () => window.print());
+
+    renderLabels();
+  </script>
+</body>
+</html>

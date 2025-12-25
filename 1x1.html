@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>1x1 Bin Label</title>
+  <style>
+    :root {
+      font-family: "Helvetica Neue", Arial, sans-serif;
+      color: #111;
+    }
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      padding: 24px;
+      background: #f1f3f5;
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      font-size: 0.85rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .controls label {
+      font-weight: 600;
+    }
+    .controls input[type="range"] {
+      width: 220px;
+    }
+    .controls output {
+      min-width: 3ch;
+      font-weight: 700;
+      text-align: right;
+    }
+    button {
+      border: none;
+      background: #111;
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      letter-spacing: 0.08em;
+    }
+    .sheet {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .label {
+      width: 1in;
+      height: 1in;
+      padding: 0;
+      background: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+    .label::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      border: 1.5px solid #000;
+      pointer-events: none;
+    }
+    .label-inner {
+      height: 100%;
+      padding: 0.04in;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      z-index: 1;
+    }
+    .label-header {
+      font-size: 0.47rem;
+      line-height: 1.1;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      font-weight: 700;
+    }
+    .label small {
+      font-size: 0.38rem;
+      display: block;
+    }
+    .datamatrix {
+      width: 100%;
+      height: auto;
+      margin-top: 2px;
+      border: 0.5px solid #000;
+    }
+    .datamatrix rect {
+      fill: #000;
+    }
+    .footer-line {
+      font-size: 0.35rem;
+      display: flex;
+      justify-content: space-between;
+      font-weight: 600;
+    }
+    @media print {
+      body {
+        background: #fff;
+        padding: 0.2in;
+      }
+      .controls {
+        display: none;
+      }
+      .sheet {
+        gap: 6px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="controls">
+    <label for="quantity">Labels to print</label>
+    <input type="range" id="quantity" min="1" max="100" value="1" />
+    <output id="quantityDisplay">1</output>
+    <button id="printButton" type="button">Print</button>
+  </div>
+  <div id="labelSheet" class="sheet" aria-live="polite"></div>
+
+  <script>
+    const quantityInput = document.getElementById("quantity");
+    const quantityDisplay = document.getElementById("quantityDisplay");
+    const sheet = document.getElementById("labelSheet");
+    const matrixPattern = [
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+      [1, 1, 0, 0, 1, 0, 1, 0, 0, 1],
+      [1, 0, 1, 0, 1, 0, 0, 1, 1, 1],
+      [1, 0, 0, 1, 0, 1, 0, 1, 0, 1],
+      [1, 1, 0, 0, 0, 0, 1, 0, 1, 1],
+      [1, 0, 1, 1, 1, 0, 0, 1, 0, 1],
+      [1, 0, 0, 0, 1, 1, 0, 0, 1, 1],
+      [1, 1, 0, 1, 0, 0, 0, 1, 0, 1],
+      [1, 0, 1, 0, 1, 0, 1, 0, 0, 1],
+      [1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
+    ];
+
+    function createDataMatrix(pattern, cell) {
+      let rects = "";
+      pattern.forEach((row, r) => {
+        row.forEach((value, c) => {
+          if (value) {
+            rects += `<rect x="${c * cell}" y="${r * cell}" width="${cell}" height="${cell}"></rect>`;
+          }
+        });
+      });
+      const size = pattern.length * cell;
+      return `<svg class="datamatrix" viewBox="0 0 ${size} ${size}" role="img" aria-label="Encoded stock identifier">${rects}</svg>`;
+    }
+
+    function renderLabel(sequence) {
+      const matrix = createDataMatrix(matrixPattern, 5);
+      const today = new Date();
+      const julian = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 86400000)
+        .toString()
+        .padStart(3, "0");
+      return `
+        <article class="label" aria-label="Bin label ${sequence}">
+          <div class="label-inner">
+            <div class="label-header">
+              SKU RL-8842<br />
+              BIN A3-14
+              <small>Cycle Ct ${today.getFullYear()}-${julian}</small>
+            </div>
+            ${matrix}
+            <div class="footer-line">
+              <span>QTY 01</span>
+              <span>#${sequence.toString().padStart(2, "0")}</span>
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderLabels() {
+      const count = Number(quantityInput.value);
+      quantityDisplay.textContent = quantityInput.value;
+      const labels = Array.from({ length: count }, (_, idx) => renderLabel(idx + 1));
+      sheet.innerHTML = labels.join("");
+    }
+
+    quantityInput.addEventListener("input", renderLabels);
+
+    document.getElementById("printButton").addEventListener("click", () => {
+      window.print();
+    });
+
+    renderLabels();
+  </script>
+</body>
+</html>
