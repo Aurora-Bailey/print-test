@@ -1,20 +1,133 @@
-<html>
-    <head>
-        <style>
-            * {
-                margin: 0;
-                padding: 0
-                color: black;
-                background-color: white;
-            }
-            body {
-                border: 1px solid black;
-            }
-        </style>
-    </head>
-    <body>
-        <p>Paper, pale planet of pressed trees, you arrive like a quiet agreement between chaos and meaning, a soft continent where ink can build cities and erase them, where the hand becomes weather and the pen becomes a migrating bird, and every fiber remembers the river it left behind; paper is the hush before a verdict, the crisp snap of a new notebook spine, the tender bruise of a folded corner, the polite crackle of receipts and letters and maps that pretend they know the way; dolor vellum, lumen folio, scriba sanctum, you drink graphite like rainwater, you keep the ghosts of fingerprints like little moons, you host the architecture of math and the gossip of grocery lists with the same unblinking grace; in the margin, a tiny empire forms, a doodled dragon, a bent star, a half-solved theorem, a love note disguised as a shopping code, and the cellulose sea holds it all, patient as an old librarian, hungry as a shredder; o chartula, o pagina, o quietus sheet, you flutter like a white flag and yet you start wars with one sentence, you sign treaties, you launch poems, you mail prayers, you wrap knives, you cradle seeds, you cover windows, you dress wounds, you become a paper crown, a paper cut, a paper trail; lorem inkum, psalmus pulpum, meta memora, the office labyrinth is paved with you, the classroom altar stacked with you, the courtroom thunder amplified by you, the studio floor snowed with your scraps, and still you keep offering clean sky; when fire kisses you, you turn to black lace and then to ash, a brief theology of vanishing, and when water takes you, you swell into a soft ruin, your letters bleeding like tired constellations, yet even then you insist on story; you are both vessel and veil, both scaffold and skin, thin enough to tear under a thumb yet strong enough to carry a century, thin enough to whisper but loud enough to archive a life; papyrus phantom, notebook nectar, folio fortuna, you are the slow technology of devotion, the analog spellbook, the portable silence, the square where thought can sit down and stop running; and so the mind, restless animal, comes to you to be tamed, to be traced, to be translated into lines and loops and unsteady halos, and you, simple sheet, accept the burden without complaint, saying in your bright blank language: write, write, write.
-</p>
+<!doctype html>
+<meta charset="utf-8">
+<div class="toolbar">
+  <button type="button" class="toolbar-button" data-direction="-1">-</button>
+  <button type="button" id="print-button" class="toolbar-button">Print</button>
+  <button type="button" class="toolbar-button" data-direction="1">+</button>
+</div>
+<main>
+  <div id="tracking-display">
+    <span class="tracking-prefix">0-000-</span><b id="counter-value">01</b>
+  </div>
+  <canvas id="dm" aria-label="DataMatrix code"></canvas>
+</main>
+<style>
+* {
+  padding: 0;
+  margin: 0;
+  border: 0;
+  box-sizing: border-box;
+}
+body {
+  height: 100vw; // force square
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Segoe UI", "Roboto", "Helvetica Neue", Arial, sans-serif;
+  background-color: white;
+  color: black;
+}
+main {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #fff;
+}
+#tracking-display {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: 0.1rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0rem;
+}
+.tracking-prefix {
+  font-weight: 400;
+}
+#dm {
+  transform: rotate(90deg);
+}
+.toolbar {
+  position: fixed;
+  top: 1.25rem;
+  right: 1.25rem;
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background-color: #fff;
+  border: 1px solid #d8dde7;
+  border-radius: 999px;
+  box-shadow: 0 10px 35px rgba(15, 23, 42, 0.12);
+}
+.toolbar-button {
+  padding: 0.4rem 1.1rem;
+  border-radius: 999px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  background-color: #0f172a;
+  color: #fff;
+  border: none;
+}
+.toolbar-button[data-direction] {
+  background-color: #2563eb;
+}
+.toolbar-button:focus-visible {
+  outline: 2px solid #f97316;
+  outline-offset: 2px;
+}
+@media print {
+  .toolbar {
+    display: none !important;
+  }
+  body {
+    background-color: #fff;
+  }
+  main {
+    box-shadow: none;
+    border: none;
+    padding: 0;
+  }
+}
+</style>
+<script src="https://unpkg.com/bwip-js/dist/bwip-js-min.js"></script>
+<script>
+const dmCanvas = document.getElementById("dm");
+const counterElement = document.getElementById("counter-value");
+const baseMatrixPrefix = "00.000.";
+let counterValue = counterElement.textContent.trim().toUpperCase() || "01";
 
-    </body>
-</html>
+const printButton = document.getElementById("print-button");
+printButton.addEventListener("click", () => window.print());
+
+document.querySelectorAll('[data-direction]').forEach(button => {
+  button.addEventListener("click", () => handleAdjust(Number(button.dataset.direction)));
+});
+
+function handleAdjust(step) {
+  let numeric = parseInt(counterValue, 36) + step;
+  if (numeric < 0) {
+    numeric = 0;
+  }
+  const next = numeric.toString(36).toUpperCase();
+  counterValue = next.padStart(2, "0");
+  updateDisplay();
+}
+
+function updateDisplay() {
+  counterElement.textContent = counterValue;
+  const matrixValue = `${baseMatrixPrefix}${counterValue}`;
+  bwipjs.toCanvas(dmCanvas, {
+    bcid: "datamatrix",
+    text: matrixValue,
+    scale: 2,
+    padding: 0
+  });
+}
+
+updateDisplay();
+</script>
